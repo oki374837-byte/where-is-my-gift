@@ -55,9 +55,14 @@ export function useDeviceActivity(): DeviceActivity {
           (position) => {
             if (!mounted) return;
             const next = { latitude: position.coords.latitude, longitude: position.coords.longitude };
-            if (previousLocation.current) totalDistance.current += distanceInMeters(previousLocation.current, next);
+            const accuracy = Number.isFinite(position.coords.accuracy) ? Math.max(0, position.coords.accuracy ?? 0) : 0;
+            const rawDelta = previousLocation.current ? distanceInMeters(previousLocation.current, next) : 0;
+            const reportedSpeed = Math.max(0, position.coords.speed ?? 0);
+            const maxAcceptedDelta = Math.max(100, accuracy * 4);
+            const isPlausibleMovement = rawDelta === 0 || (rawDelta <= maxAcceptedDelta && reportedSpeed <= 20);
+            if (isPlausibleMovement) totalDistance.current += rawDelta;
             previousLocation.current = next;
-            setActivity((current) => ({ ...current, speed: Math.max(0, position.coords.speed ?? 0), distanceWalked: totalDistance.current }));
+            setActivity((current) => ({ ...current, speed: isPlausibleMovement ? reportedSpeed : 0, distanceWalked: totalDistance.current }));
           },
         );
       }

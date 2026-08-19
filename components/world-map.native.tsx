@@ -79,16 +79,12 @@ export function WorldMap({
 
   if (!canRenderNativeMap) {
     return (
-      <View style={[styles.container, styles.safeMapFallback, { paddingTop: Math.max(insets.top, 16) }]}>
-        <View style={styles.fallbackHeader}>
-          <Ionicons name="map-outline" size={22} color="#FBBF24" />
-          <View style={styles.fallbackCopy}>
-            <Text style={styles.fallbackTitle}>الخريطة الحقيقية تحتاج مفتاح Google Maps</Text>
-            <Text style={styles.fallbackText}>
-              التطبيق يعمل بأمان الآن. أضف GOOGLE_MAPS_API_KEY في إعداد EAS لتظهر خرائط Google والأقمار الصناعية.
-            </Text>
-          </View>
+            <View style={[styles.container, styles.safeMapFallback, { paddingTop: Math.max(insets.top, 16) }]}>
+        <View style={styles.fallbackNotice}>
+          <Ionicons name="compass-outline" size={15} color="#FBBF24" />
+          <Text style={styles.fallbackNoticeText}>خريطة اللعب المحلية · نقاطك جاهزة للاستكشاف</Text>
         </View>
+
         <View style={styles.fallbackCanvas}>
           <View style={styles.playerPulse} />
           <View style={styles.playerDot} />
@@ -179,7 +175,7 @@ export function WorldMap({
             title={`${structure.emoji} ${structure.title}`}
             description={`مدينة أصلية · المرحلة ${structure.stage}`}
           >
-            <View style={[styles.structureMarker, { borderColor: structure.color }]}> 
+            <View style={[styles.structureMarker, { borderColor: structure.color }]}>
               <Text style={styles.structureEmoji}>{structure.emoji}</Text>
             </View>
           </Marker>
@@ -194,7 +190,7 @@ export function WorldMap({
             description="شخصية متواجدة في المدينة · اضغط للتفاعل"
             onPress={() => onSelectLivePlayer?.(player)}
           >
-            <View style={[styles.otherPlayerMarker, { backgroundColor: player.color || "#38BDF8" }]}> 
+            <View style={[styles.otherPlayerMarker, { backgroundColor: player.color || "#38BDF8" }]}>
               <Text style={styles.otherPlayerText}>{player.emoji || player.name[0]}</Text>
             </View>
           </Marker>
@@ -328,16 +324,20 @@ const styles = StyleSheet.create({
     backgroundColor: "#07111F",
     paddingHorizontal: 16,
   },
-  fallbackHeader: {
+  fallbackNotice: {
+    alignSelf: "flex-start",
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-    padding: 14,
-    borderRadius: 16,
-    backgroundColor: "#12243A",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "rgba(15, 23, 42, 0.78)",
     borderWidth: 1,
-    borderColor: "#31506D",
+    borderColor: "rgba(251, 191, 36, 0.45)",
+    zIndex: 3,
   },
+  fallbackNoticeText: { color: "#FDE68A", fontSize: 10, fontWeight: "800" },
   fallbackCopy: {
     flex: 1,
   },

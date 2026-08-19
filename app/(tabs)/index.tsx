@@ -22,7 +22,6 @@ import { getCityCharacters, getGameMap, getMapPoints, DEFAULT_REALITY_MODE, DEFA
 import { getCharacterLevel } from "@/lib/character-progression";
 import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
-import { GameUpdatesCard } from "@/components/GameUpdatesCard";
 import { createRegionSnapshot, loadRegionSnapshot, saveRegionSnapshot, type SavedRegion } from "@/lib/region-storage";
 
 export default function HomeScreen() {
@@ -37,6 +36,7 @@ export default function HomeScreen() {
     ambientPlayer = { play: () => {}, pause: () => {}, loop: false, volume: 1 };
   }
   const [playerLocation, setPlayerLocation] = useState<Coordinates>(DEFAULT_LOCATION);
+  const [showJourneyPanel, setShowJourneyPanel] = useState(false);
   const [locationState, setLocationState] = useState("جارٍ تحديد موقعك");
   const [selectedPoint, setSelectedPoint] = useState<QuestPoint | null>(null);
   const [refreshingWorld, setRefreshingWorld] = useState(false);
@@ -377,56 +377,42 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* لوحة التحكم السفلية العائمة */}
+        {/* لوحة تحكم مختصرة؛ التفاصيل الثانوية لا تغطي الخريطة إلا عند طلب اللاعب */}
         <View style={styles.floatingBottom}>
-          <View style={[styles.regionPanel, { backgroundColor: "rgba(10, 22, 32, 0.9)", borderColor: colors.border }]}> 
+          <View style={[styles.compactDock, { backgroundColor: "rgba(7, 20, 32, 0.94)", borderColor: colors.border }]}>
             <View style={styles.regionCopy}>
               <Text style={[styles.regionTitle, { color: colors.foreground }]}>{currentMap.name} · {currentMap.city}</Text>
               <Text style={[styles.regionStatus, { color: colors.muted }]}>{regionStatus}</Text>
             </View>
-            <View style={styles.regionActions}>
-              <Pressable onPress={saveCurrentRegion} style={({ pressed }) => [styles.regionButton, { backgroundColor: colors.primary, opacity: pressed ? 0.75 : 1 }]}>
-                <Text style={styles.regionButtonText}>حفظ المنطقة</Text>
+            <View style={styles.compactActions}>
+              <Pressable onPress={() => setShowJourneyPanel((visible) => !visible)} style={[styles.journeyButton, { borderColor: colors.border }]}>
+                <Text style={[styles.journeyButtonText, { color: colors.primary }]}>{showJourneyPanel ? "إخفاء" : "الرحلة"}</Text>
               </Pressable>
-              <Pressable onPress={loadSavedRegion} style={({ pressed }) => [styles.regionButton, styles.regionLoadButton, { opacity: pressed ? 0.75 : 1 }]}>
-                <Text style={styles.regionLoadText}>تحميل المحفوظ</Text>
+              <Pressable onPress={() => void saveCurrentRegion()} style={[styles.saveIconButton, { backgroundColor: colors.primary }]} accessibilityLabel="حفظ المنطقة">
+                <Text style={styles.saveIconText}>⌄</Text>
               </Pressable>
             </View>
           </View>
-          <GameUpdatesCard />
-          <View style={[styles.syncPill, { borderColor: !isOnline || socialFriends.isError ? "#F87171" : "#4ADE80" }]}> 
-            <View style={[styles.syncDot, { backgroundColor: !isOnline || socialFriends.isError ? "#F87171" : socialFriends.isFetching ? "#FACC15" : "#4ADE80" }]} />
-            <Text style={styles.syncText}>{syncLabel}</Text>
-          </View>
-          <View style={[styles.statsRow, { backgroundColor: "rgba(10, 22, 32, 0.88)", borderColor: colors.border }]}>
-            <View style={styles.statItem}>
-              <Text style={[styles.statLabel, { color: colors.muted }]}>نقاط الخبرة XP</Text>
-              <Text style={[styles.statValue, { color: colors.foreground }]}>{xp}</Text>
-            </View>
-            <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.statItem}>
-              <Text style={[styles.statLabel, { color: colors.muted }]}>العملات المكتسبة</Text>
-              <Text style={[styles.statValue, { color: colors.warning }]}>{coins}</Text>
-            </View>
-          </View>
-
-          <View style={[styles.dailyCard, { backgroundColor: "rgba(10, 22, 32, 0.9)", borderColor: colors.border }]}>
-            <View style={styles.dailyHeader}><Text style={[styles.dailyTitle, { color: colors.foreground }]}>مهام الرحلة</Text><Text style={[styles.dailyHint, { color: colors.muted }]}>تقدم محلي محفوظ</Text></View>
-            {dailyMissions.map((mission) => <View key={mission.id} style={styles.dailyRow}><Text style={[styles.dailyLabel, { color: colors.muted }]}>{mission.label}</Text><Text style={[styles.dailyProgress, { color: mission.value >= mission.target ? colors.success : colors.primary }]}>{mission.value} / {mission.target}</Text></View>)}
-          </View>
-
-          {closest && (
-            <Pressable onPress={() => setSelectedPoint(closest)} style={({ pressed }) => [styles.questCard, { backgroundColor: "rgba(10, 22, 32, 0.92)", borderColor: colors.border, opacity: pressed ? 0.9 : 1 }]}>
-              <View style={[styles.questIcon, { backgroundColor: `${closest.color}33` }]}><Text style={{ color: closest.color, fontSize: 22 }}>✦</Text></View>
-              <View style={styles.questCopy}>
-                <Text style={[styles.questTitle, { color: colors.foreground }]}>{closest.title}</Text>
-                <Text style={[styles.questMeta, { color: colors.muted }]}>أقرب نقطة · {Math.round(closest.distance)} متر · {closest.reward}</Text>
+          {showJourneyPanel && (
+            <View style={[styles.journeyPanel, { backgroundColor: "rgba(7, 20, 32, 0.96)", borderColor: colors.border }]}>
+              <View style={styles.journeyStats}>
+                <View style={styles.statItem}><Text style={[styles.statLabel, { color: colors.muted }]}>XP</Text><Text style={[styles.statValue, { color: colors.foreground }]}>{xp}</Text></View>
+                <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+                <View style={styles.statItem}><Text style={[styles.statLabel, { color: colors.muted }]}>عملات</Text><Text style={[styles.statValue, { color: colors.warning }]}>{coins}</Text></View>
+                <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+                <View style={styles.statItem}><Text style={[styles.statLabel, { color: colors.muted }]}>الحالة</Text><Text style={[styles.syncText, { color: isOnline ? "#4ADE80" : "#FBBF24" }]}>{isOnline ? "متصل" : "محفوظ"}</Text></View>
               </View>
+              <View style={styles.dailyHeader}><Text style={[styles.dailyTitle, { color: colors.foreground }]}>مهام الرحلة</Text><Text style={[styles.dailyHint, { color: colors.muted }]}>{locationState}</Text></View>
+              {dailyMissions.map((mission) => <View key={mission.id} style={styles.dailyRow}><Text style={[styles.dailyLabel, { color: colors.muted }]}>{mission.label}</Text><Text style={[styles.dailyProgress, { color: mission.value >= mission.target ? colors.success : colors.primary }]}>{mission.value} / {mission.target}</Text></View>)}
+            </View>
+          )}
+          {closest && !showJourneyPanel && (
+            <Pressable onPress={() => setSelectedPoint(closest)} style={({ pressed }) => [styles.questCard, { backgroundColor: "rgba(7, 20, 32, 0.94)", borderColor: colors.border, opacity: pressed ? 0.9 : 1 }]}>
+              <View style={[styles.questIcon, { backgroundColor: `${closest.color}33` }]}><Text style={{ color: closest.color, fontSize: 22 }}>✦</Text></View>
+              <View style={styles.questCopy}><Text style={[styles.questTitle, { color: colors.foreground }]}>{closest.title}</Text><Text style={[styles.questMeta, { color: colors.muted }]}>أقرب نقطة · {Math.round(closest.distance)} متر · {closest.reward}</Text></View>
               <Text style={[styles.chevron, { color: colors.primary }]}>‹</Text>
             </Pressable>
           )}
-
-          <Text style={[styles.locationNote, { color: colors.muted }]}>{locationState}</Text>
         </View>
 
         {/* ورقة تفاصيل النقطة المحددة */}
@@ -556,7 +542,15 @@ const styles = StyleSheet.create({
   weatherCopy: { marginLeft: 6 },
   weatherTitle: { fontSize: 11, fontWeight: "800" },
   weatherMeta: { fontSize: 9, marginTop: 2 },
-  floatingBottom: { position: "absolute", bottom: 20, left: 16, right: 16, zIndex: 10 },
+  floatingBottom: { position: "absolute", bottom: 18, left: 12, right: 12, zIndex: 10 },
+  compactDock: { borderRadius: 18, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 9, flexDirection: "row", alignItems: "center" },
+  compactActions: { flexDirection: "row", alignItems: "center", gap: 6 },
+  journeyButton: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7 },
+  journeyButtonText: { fontSize: 10, fontWeight: "900" },
+  saveIconButton: { width: 30, height: 30, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  saveIconText: { color: "#062B1B", fontSize: 18, fontWeight: "900", transform: [{ rotate: "180deg" }] },
+  journeyPanel: { borderRadius: 16, borderWidth: 1, padding: 11, marginTop: 6 },
+  journeyStats: { flexDirection: "row", alignItems: "center", justifyContent: "space-around", marginBottom: 10 },
   regionPanel: { borderRadius: 16, borderWidth: 1, padding: 9, marginBottom: 8, flexDirection: "row", alignItems: "center" },
   regionCopy: { flex: 1, marginRight: 8 },
   regionTitle: { fontSize: 11, fontWeight: "800", textAlign: "right" },
