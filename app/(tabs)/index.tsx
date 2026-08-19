@@ -301,16 +301,23 @@ export default function HomeScreen() {
             </View>
             <View style={styles.mapModeBadge}><Text style={styles.mapModeText}>استكشاف بلا وحوش</Text></View>
           </View>
-          <WorldMap
-            playerLocation={playerLocation}
-            points={activePoints}
-            selectedPointId={selectedPoint?.id}
-            onSelectPoint={setSelectedPoint}
-            onRecenter={() => setLocationState("تم تحديث مركز الخريطة")}
-            livePlayers={liveFriends}
-            onSelectLivePlayer={(player) => setLocationState(`تفاعلت مع ${player.name}`)}
-            structures={savedRegion?.structures ?? []}
-          />
+          {setupModalVisible ? (
+            <View style={styles.mapSelectionSafePlaceholder}>
+              <Text style={styles.mapSelectionSafeTitle}>اختر مدينتك أولاً</Text>
+              <Text style={styles.mapSelectionSafeText}>سيتم تحميل خريطة اللعب بعد إكمال الإعداد.</Text>
+            </View>
+          ) : (
+            <WorldMap
+              playerLocation={playerLocation}
+              points={activePoints}
+              selectedPointId={selectedPoint?.id}
+              onSelectPoint={setSelectedPoint}
+              onRecenter={() => setLocationState("تم تحديث مركز الخريطة")}
+              livePlayers={liveFriends}
+              onSelectLivePlayer={(player) => setLocationState(`تفاعلت مع ${player.name}`)}
+              structures={savedRegion?.structures ?? []}
+            />
+          )}
           <View style={styles.mapActionRow}>
             <Pressable onPress={() => router.push("/ar")} style={[styles.primaryModeButton, { backgroundColor: colors.primary }]}><Text style={styles.primaryModeButtonText}>◉ الواقع المعزز</Text></Pressable>
             <Pressable onPress={() => setSetupModalVisible(true)} style={styles.secondaryModeButton}><Text style={styles.secondaryModeButtonText}>⌖ تغيير الماب</Text></Pressable>
@@ -494,6 +501,9 @@ function GameMapCanvas({
 
 const styles = StyleSheet.create({
   root: { flex: 1, position: "relative" },
+  mapSelectionSafePlaceholder: { height: 240, borderRadius: 22, marginHorizontal: 14, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(11, 43, 21, 0.96)", borderWidth: 1, borderColor: "rgba(34, 197, 94, 0.35)" },
+  mapSelectionSafeTitle: { color: "#FEF08A", fontSize: 18, fontWeight: "900" },
+  mapSelectionSafeText: { color: "#A7F3D0", fontSize: 12, marginTop: 8 },
   worldStage: {
     minHeight: 438, flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#122033" },
   playerMarker: { width: 76, height: 76, borderRadius: 38, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(22, 163, 74, 0.28)", borderWidth: 2, borderColor: "#4ADE80", shadowColor: "#000", shadowOpacity: 0.35, shadowRadius: 12, elevation: 8 },
