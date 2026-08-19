@@ -1,0 +1,191 @@
+export interface GameCharacter {
+  id: string;
+  name: string;
+  category: "anime" | "cartoon" | "actors" | "football" | "games" | "celebrities";
+  emoji: string;
+  description: string;
+  bonus: string;
+  color: string;
+  role: "warrior" | "archer" | "mage" | "knight" | "assassin";
+  roleLabel: string;
+  skill: string;
+}
+
+export const GAME_CHARACTERS: GameCharacter[] = [
+  // أنمي أصلي
+  {
+    id: "neon-samurai",
+    name: "ساموراي النيون",
+    category: "anime",
+    emoji: "⚔️",
+    description: "مقاتل أنمي أصلي يحمي بوابات المدن ويطارد الهدايا النادرة.",
+    bonus: "+20% خبرة عند إكمال المهام المتتابعة",
+    color: "#F43F5E",
+    role: "warrior",
+    roleLabel: "محارب",
+    skill: "ضربة الهلال: تعزز خبرة المهمة التالية.",
+  },
+  // كرتون أصلي
+  {
+    id: "toon-detective",
+    name: "المحقق الكرتوني",
+    category: "cartoon",
+    emoji: "🕵️",
+    description: "شخصية مرحة تكتشف الأدلة المخفية في كل حي.",
+    bonus: "+15% نطاق اكتشاف الأدلة",
+    color: "#06B6D4",
+    role: "archer",
+    roleLabel: "رامٍ",
+    skill: "عدسة المرح: تكشف النقاط القريبة المخفية.",
+  },
+  // شخصيات سينمائية أصلية
+  {
+    id: "silver-star",
+    name: "نجم الشاشة الفضّي",
+    category: "actors",
+    emoji: "🎬",
+    description: "بطل سينمائي أصلي يحوّل كل مهمة إلى مشهد مغامرة.",
+    bonus: "+10% عملات من المهام اليومية",
+    color: "#8B5CF6",
+    role: "knight",
+    roleLabel: "فارس",
+    skill: "المشهد الحاسم: درع مؤقت عند الاقتراب من هدية.",
+  },
+  // لاعبو كرة قدم أصليون
+  {
+    id: "goal-runner",
+    name: "عدّاء المرمى",
+    category: "football",
+    emoji: "⚽",
+    description: "لاعب كرة قدم أصلي سريع يحوّل الحركة إلى مكافآت.",
+    bonus: "+15% مكافآت الحركة والمسافة",
+    color: "#22C55E",
+    role: "assassin",
+    roleLabel: "عدّاء سريع",
+    skill: "انطلاقة المرمى: تعزيز السرعة أثناء تتبع المهمة.",
+  },
+  // أبطال ألعاب أصلية
+  {
+    id: "pixel-ranger",
+    name: "حارس البكسل",
+    category: "games",
+    emoji: "🎮",
+    description: "بطل ألعاب أصلي يجمع العناصر ويحل الألغاز في العالم الحقيقي.",
+    bonus: "+20% فرصة العثور على عناصر نادرة",
+    color: "#EAB308",
+    role: "mage",
+    roleLabel: "ساحر تقني",
+    skill: "موجة البكسل: تضاعف فرصة العنصر النادر.",
+  },
+  // مشاهير أصليون
+  {
+    id: "trend-maker",
+    name: "صانع الترند",
+    category: "celebrities",
+    emoji: "✨",
+    description: "شخصية مشهورة أصلية تنشر تحديات الاستكشاف بين اللاعبين.",
+    bonus: "+10% مكافآت اللعب الجماعي",
+    color: "#EC4899",
+    role: "archer",
+    roleLabel: "رامٍ اجتماعي",
+    skill: "نداء الجمهور: مكافأة إضافية عند اللعب مع صديق.",
+  },
+  // الشخصيات المتبقية
+  {
+    id: "wise-blue-guide",
+    name: "المرشد الأزرق الحكيم",
+    category: "cartoon",
+    emoji: "🧙‍♂️",
+    description: "قائد السنافر الحكيم بلحيته البيضاء وقبعته الحمراء، خبير في إيجاد الهدايا والحلول.",
+    bonus: "+20% خبرة إضافية عند فتح الهدايا",
+    color: "#EF4444",
+    role: "mage",
+    roleLabel: "ساحر",
+    skill: "درع الحكمة: يزيد خبرة الهدايا المكتشفة.",
+  },
+  {
+    id: "flower-scout",
+    name: "كشافة الزهور",
+    category: "cartoon",
+    emoji: "🌸",
+    description: "لطيفة وذكية، تجلب الفرح والسرور في كل رحلة استكشاف.",
+    bonus: "+15% عملات إضافية من النقاط",
+    color: "#EC4899",
+    role: "archer",
+    roleLabel: "رامية",
+    skill: "عين الصياد: توسّع نطاق اكتشاف النقاط.",
+  },
+  {
+    id: "tool-master",
+    name: "خبير الأدوات",
+    category: "cartoon",
+    emoji: "🛠️",
+    description: "بارع في اختراع الأدوات وفتح الصناديق والمخابئ السرية بسرعة.",
+    bonus: "كشف الصناديق المخفية عن بعد",
+    color: "#3B82F6",
+    role: "warrior",
+    roleLabel: "محارب",
+    skill: "قبضة الصندوق: تفتح المكافآت القريبة بسرعة.",
+  },
+  // الأنمي والكرتون
+  {
+    id: "energy-hero",
+    name: "بطل الطاقة",
+    category: "anime",
+    emoji: "🔥",
+    description: "بطل المغامرات الخارق الذي لا يمل من البحث عن التحديات الجديدة.",
+    bonus: "سرعة حركة فائقة في تتبع المسارات",
+    color: "#F97316",
+    role: "warrior",
+    roleLabel: "محارب",
+    skill: "اندفاعة المغامر: تعزيز الحركة أثناء تتبع المهمة.",
+  },
+  {
+    id: "treasure-captain",
+    name: "قبطان الكنوز",
+    category: "anime",
+    emoji: "🏴‍☠️",
+    description: "مستكشف البحار والمحيطات والكنوز المخبأة في كل مكان.",
+    bonus: "مضاعفة مكافآت صناديق الكنز والهدية",
+    color: "#EAB308",
+    role: "knight",
+    roleLabel: "فارس",
+    skill: "حارس الكنز: مكافأة إضافية من الصناديق.",
+  },
+  {
+    id: "shadow-ninja",
+    name: "نينجا الظلال",
+    category: "anime",
+    emoji: "⚡",
+    description: "نيون استكشاف العالم الحقيقي بمهارة وسرعة البرق.",
+    bonus: "اكتشاف النقاط بعشرة أضعاف المدى",
+    color: "#10B981",
+    role: "assassin",
+    roleLabel: "قاتل متخفٍ",
+    skill: "خطوة الظل: يوسّع مدى اكتشاف النقاط المخفية.",
+  },
+  {
+    id: "cheerful-mouse",
+    name: "الفأر المرح",
+    category: "cartoon",
+    emoji: "🐭",
+    description: "صديق الجميع الكلاسيكي المبهج في كل مغامرة.",
+    bonus: "+10% حظ إضافي في الهدايا اليومية",
+    color: "#6366F1",
+    role: "archer",
+    roleLabel: "رامي مرح",
+    skill: "حظ البطل: فرصة أفضل للهدايا اليومية.",
+  },
+  {
+    id: "bugs-bunny",
+    name: "باغز باني",
+    category: "cartoon",
+    emoji: "🥕",
+    description: "ذكي ومرح، يظهر دائماً في الأماكن غير المتوقعة.",
+    bonus: "تخطي المسافات الطويلة بنجاح",
+    color: "#A855F7",
+    role: "assassin",
+    roleLabel: "مخادع سريع",
+    skill: "قفزة الأرنب: تجاوز المسارات الطويلة بمرونة.",
+  },
+];

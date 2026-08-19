@@ -42,3 +42,13 @@ example
 # generated native folders
 /ios
 /android
+
+# Local secrets and generated files
+.env
+.env.*
+!.env.example
+node_modules/
+.expo/
+dist/
+build/
+.DS_Store
