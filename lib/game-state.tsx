@@ -6,6 +6,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 import { distanceInMeters } from "@/lib/game-math";
 import type { Coordinates, QuestPoint } from "@/lib/worldquest-types";
+import { getInventoryTotal, INVENTORY_CAPACITY } from "@/lib/item-catalog";
 import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
 
@@ -29,9 +30,15 @@ export type GameState = {
   lastLocation: Coordinates | null;
   lastActiveAt: number;
   pendingActions: PendingAction[];
+  dailyStreak: number;
+  lastDailyClaimAt: number | null;
 };
 
 const STORAGE_KEY = "worldquest.game-state";
+
+function getStorageKey(userId: number | string | null | undefined) {
+  return userId == null ? `${STORAGE_KEY}.guest` : `${STORAGE_KEY}.user.${String(userId)}`;
+}
 
 export const DEFAULT_GAME_STATE: GameState = {
   xp: 240,
@@ -44,6 +51,8 @@ export const DEFAULT_GAME_STATE: GameState = {
   lastLocation: null,
   lastActiveAt: Date.now(),
   pendingActions: [],
+  dailyStreak: 0,
+  lastDailyClaimAt: null,
 };
 
 function normalizeState(raw: Partial<GameState>): GameState {
@@ -60,6 +69,8 @@ function normalizeState(raw: Partial<GameState>): GameState {
     lastLocation: raw.lastLocation ?? null,
     lastActiveAt: Number.isFinite(raw.lastActiveAt) ? Number(raw.lastActiveAt) : Date.now(),
     pendingActions: Array.isArray(raw.pendingActions) ? raw.pendingActions : [],
+    dailyStreak: Number.isFinite(raw.dailyStreak) ? Math.max(0, Math.floor(Number(raw.dailyStreak))) : 0,
+    lastDailyClaimAt: raw.lastDailyClaimAt == null ? null : (Number.isFinite(raw.lastDailyClaimAt) ? Number(raw.lastDailyClaimAt) : null),
   };
 }
 
@@ -75,9 +86,9 @@ function toProgressPayload(state: GameState) {
   };
 }
 
-async function persistState(state: GameState) {
+async function persistState(state: GameState, storageKey: string) {
   await AsyncStorage.multiSet([
-    [STORAGE_KEY, JSON.stringify(state)],
+    [storageKey, JSON.stringify(state)],
     ["worldquest.collected", JSON.stringify(state.collectedIds)],
     ["worldquest.xp", String(state.xp)],
     ["worldquest.coins", String(state.coins)],
@@ -92,10 +103,11 @@ type GameStateContextValue = {
   isOnline: boolean;
   collectQuest: (point: QuestPoint) => Promise<boolean>;
   recordLocation: (location: Coordinates) => void;
-  addItem: (itemId: string, quantity?: number) => void;
+  addItem: (itemId: string, quantity?: number) => boolean;
   spendCoins: (amount: number) => boolean;
   consumeItem: (itemId: string, quantity?: number) => boolean;
   removeItem: (itemId: string) => void;
+  claimDailyReward: () => { claimed: boolean; coins: number; xp: number; streak: number };
   resetGame: () => Promise<void>;
 };
 
@@ -105,9 +117,12 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<GameState>(DEFAULT_GAME_STATE);
   const [hydrated, setHydrated] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
+  const { isAuthenticated, user } = useAuth();
+  const storageKey = getStorageKey(user?.id);
+  const storageKeyRef = useRef(storageKey);
   const latestState = useRef(DEFAULT_GAME_STATE);
   const remoteBootstrapHandled = useRef(false);
-  const { isAuthenticated } = useAuth();
+  const bootstrappedUserId = useRef<number | string | null>(null);
   const progressQuery = trpc.game.getProgress.useQuery(undefined, { enabled: isAuthenticated });
   const { mutate: saveProgress, mutateAsync: saveProgressAsync } = trpc.game.saveProgress.useMutation();
   const visitedPoints = useRef(new Set<string>());
@@ -115,7 +130,9 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
+    storageKeyRef.current = storageKey;
+    setHydrated(false);
+    AsyncStorage.getItem(storageKey).then((raw) => {
       if (!active) return;
       const next = raw ? normalizeState(JSON.parse(raw) as Partial<GameState>) : DEFAULT_GAME_STATE;
       latestState.current = next;
@@ -125,7 +142,7 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
       if (active) setHydrated(true);
     });
     return () => { active = false; };
-  }, []);
+  }, [storageKey]);
 
   const flushPendingActions = useCallback(async () => {
     if (!hydrated || !isAuthenticated || syncingPending.current || latestState.current.pendingActions.length === 0) return;
@@ -136,7 +153,7 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
       const synced = normalizeState({ ...current, pendingActions: [] });
       latestState.current = synced;
       setState(synced);
-      await persistState(synced);
+      await persistState(synced, storageKeyRef.current);
     } catch {
       // Keep queued actions locally; the next authenticated refresh will retry.
     } finally {
@@ -145,20 +162,33 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
   }, [hydrated, isAuthenticated, saveProgressAsync]);
 
   useEffect(() => {
-    if (!hydrated || !isAuthenticated || progressQuery.data === undefined || remoteBootstrapHandled.current) return;
+    if (!isAuthenticated || user?.id == null) {
+      bootstrappedUserId.current = null;
+      remoteBootstrapHandled.current = false;
+      return;
+    }
+    if (bootstrappedUserId.current !== user.id) {
+      bootstrappedUserId.current = user.id;
+      remoteBootstrapHandled.current = false;
+    }
+    if (!hydrated || progressQuery.data === undefined || remoteBootstrapHandled.current) return;
     remoteBootstrapHandled.current = true;
     if (progressQuery.data) {
+      if (latestState.current.pendingActions.length > 0) {
+        void flushPendingActions();
+        return;
+      }
       const merged = normalizeState({
         ...progressQuery.data,
         pendingActions: latestState.current.pendingActions,
       });
       latestState.current = merged;
       setState(merged);
-      void persistState(merged);
+      void persistState(merged, storageKeyRef.current);
     } else {
       saveProgress(toProgressPayload(latestState.current));
     }
-  }, [hydrated, isAuthenticated, progressQuery.data, saveProgress]);
+  }, [flushPendingActions, hydrated, isAuthenticated, progressQuery.data, saveProgress, user?.id]);
 
   useEffect(() => {
     void flushPendingActions();
@@ -177,7 +207,7 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
     const next = normalizeState(update(latestState.current));
     latestState.current = next;
     setState(next);
-    void persistState(next);
+    void persistState(next, storageKeyRef.current);
     if (isAuthenticated) saveProgress(toProgressPayload(next));
     return next;
   }, [isAuthenticated, saveProgress]);
@@ -201,7 +231,7 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
       }],
       lastActiveAt: Date.now(),
     }));
-    await persistState(next);
+    await persistState(next, storageKeyRef.current);
     return true;
   }, [commit]);
 
@@ -227,8 +257,9 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
   }, [commit]);
 
   const addItem = useCallback((itemId: string, quantity = 1) => {
-    if (quantity <= 0) return;
+    if (quantity <= 0 || getInventoryTotal(latestState.current.inventory) + quantity > INVENTORY_CAPACITY) return false;
     commit((current) => ({ ...current, inventory: { ...current.inventory, [itemId]: (current.inventory[itemId] ?? 0) + quantity } }));
+    return true;
   }, [commit]);
 
   const spendCoins = useCallback((amount: number) => {
@@ -249,6 +280,35 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
     return true;
   }, [commit]);
 
+  const claimDailyReward = useCallback(() => {
+    const now = Date.now();
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    const lastClaim = latestState.current.lastDailyClaimAt;
+    if (lastClaim != null) {
+      const previous = new Date(lastClaim);
+      previous.setHours(0, 0, 0, 0);
+      if (previous.getTime() === today.getTime()) {
+        return { claimed: false, coins: 0, xp: 0, streak: latestState.current.dailyStreak };
+      }
+    }
+    const yesterday = today.getTime() - 24 * 60 * 60 * 1000;
+    const lastDay = lastClaim == null ? null : new Date(lastClaim);
+    lastDay?.setHours(0, 0, 0, 0);
+    const streak = lastDay?.getTime() === yesterday ? latestState.current.dailyStreak + 1 : 1;
+    const coins = Math.min(80, 20 + streak * 5);
+    const xp = 25;
+    commit((current) => ({
+      ...current,
+      xp: current.xp + xp,
+      coins: current.coins + coins,
+      dailyStreak: streak,
+      lastDailyClaimAt: now,
+      lastActiveAt: now,
+    }));
+    return { claimed: true, coins, xp, streak };
+  }, [commit]);
+
   const removeItem = useCallback((itemId: string) => {
     commit((current) => {
       const inventory = { ...current.inventory };
@@ -264,7 +324,7 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.multiRemove([STORAGE_KEY, "worldquest.collected", "worldquest.xp", "worldquest.coins", "worldquest.distance", "worldquest.visited"]);
   }, []);
 
-  const value = useMemo(() => ({ state, hydrated, isOnline, collectQuest, recordLocation, addItem, spendCoins, consumeItem, removeItem, resetGame }), [state, hydrated, isOnline, collectQuest, recordLocation, addItem, spendCoins, consumeItem, removeItem, resetGame]);
+  const value = useMemo(() => ({ state, hydrated, isOnline, collectQuest, recordLocation, addItem, spendCoins, consumeItem, removeItem, claimDailyReward, resetGame }), [state, hydrated, isOnline, collectQuest, recordLocation, addItem, spendCoins, consumeItem, removeItem, claimDailyReward, resetGame]);
   return <GameStateContext.Provider value={value}>{children}</GameStateContext.Provider>;
 }
 

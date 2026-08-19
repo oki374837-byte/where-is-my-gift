@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Animated, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { WorldMap } from "@/components/world-map";
 import { useColors } from "@/hooks/use-colors";
 import { useWeather } from "@/hooks/use-weather";
 import { distanceInMeters } from "@/lib/game-math";
@@ -42,7 +43,7 @@ export default function HomeScreen() {
   const [savedRegion, setSavedRegion] = useState<SavedRegion | null>(null);
   const [regionStatus, setRegionStatus] = useState("لم تُحفظ المنطقة بعد");
   const { state: gameState, collectQuest, recordLocation, isOnline } = useGameState();
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const socialFriends = trpc.social.friends.useQuery(undefined, {
     enabled: isAuthenticated,
     refetchInterval: 4_000,
@@ -78,7 +79,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     let active = true;
-    void Promise.all([loadSelectedCharacter(), hasSelectedCharacter(), loadSelectedMap(), loadRealityMode(), hasCompletedMapCharacterOnboarding()]).then(([character, hasSelection, mapId, mode, setupComplete]) => {
+    void Promise.all([loadSelectedCharacter(user?.id), hasSelectedCharacter(user?.id), loadSelectedMap(user?.id), loadRealityMode(user?.id), hasCompletedMapCharacterOnboarding(user?.id)]).then(([character, hasSelection, mapId, mode, setupComplete]) => {
       if (!active) return;
       setSelectedCharacter(character);
       setSelectedMap(mapId);
@@ -88,7 +89,7 @@ export default function HomeScreen() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     let active = true;
@@ -300,7 +301,16 @@ export default function HomeScreen() {
             </View>
             <View style={styles.mapModeBadge}><Text style={styles.mapModeText}>استكشاف بلا وحوش</Text></View>
           </View>
-          <GameMapCanvas map={currentMap} points={activePoints} livePlayers={liveFriends} selectedPointId={selectedPoint?.id} onSelectPoint={setSelectedPoint} onSelectPlayer={(player) => setLocationState(`تفاعلت مع ${player.name}`)} />
+          <WorldMap
+            playerLocation={playerLocation}
+            points={activePoints}
+            selectedPointId={selectedPoint?.id}
+            onSelectPoint={setSelectedPoint}
+            onRecenter={() => setLocationState("تم تحديث مركز الخريطة")}
+            livePlayers={liveFriends}
+            onSelectLivePlayer={(player) => setLocationState(`تفاعلت مع ${player.name}`)}
+            structures={savedRegion?.structures ?? []}
+          />
           <View style={styles.mapActionRow}>
             <Pressable onPress={() => router.push("/ar")} style={[styles.primaryModeButton, { backgroundColor: colors.primary }]}><Text style={styles.primaryModeButtonText}>◉ الواقع المعزز</Text></Pressable>
             <Pressable onPress={() => setSetupModalVisible(true)} style={styles.secondaryModeButton}><Text style={styles.secondaryModeButtonText}>⌖ تغيير الماب</Text></Pressable>
@@ -318,7 +328,7 @@ export default function HomeScreen() {
             setSelectedCharacter(char);
             setSelectedMap(mapId);
             setRealityMode(mode);
-            void Promise.all([saveSelectedCharacter(char), saveSelectedMap(mapId), saveRealityMode(mode), completeMapCharacterOnboarding()]);
+            void Promise.all([saveSelectedCharacter(char, user?.id), saveSelectedMap(mapId, user?.id), saveRealityMode(mode, user?.id), completeMapCharacterOnboarding(user?.id)]);
             if (isAuthenticated) void syncWorldState.mutateAsync({ mapId, realityMode: mode, city: getGameMap(mapId).city, latitude: playerLocation.latitude, longitude: playerLocation.longitude });
             setSetupModalVisible(false);
             setLocationState(`تم اختيار ${getGameMap(mapId).name}`);
@@ -531,12 +541,12 @@ const styles = StyleSheet.create({
   refreshIcon: { color: "#BBF7D0", fontSize: 24, fontWeight: "800", lineHeight: 26 },
   levelLabel: { fontSize: 9 },
   levelValue: { fontSize: 16, fontWeight: "800" },
-  floatingWeather: { display: "none", position: "absolute", top: 88, right: 16, borderRadius: 16, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, flexDirection: "row", alignItems: "center", zIndex: 10 },
+  floatingWeather: { position: "absolute", top: 88, right: 16, borderRadius: 16, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, flexDirection: "row", alignItems: "center", zIndex: 10 },
   weatherIcon: { fontSize: 20, width: 28, textAlign: "center" },
   weatherCopy: { marginLeft: 6 },
   weatherTitle: { fontSize: 11, fontWeight: "800" },
   weatherMeta: { fontSize: 9, marginTop: 2 },
-  floatingBottom: { display: "none", position: "absolute", bottom: 20, left: 16, right: 16, zIndex: 10 },
+  floatingBottom: { position: "absolute", bottom: 20, left: 16, right: 16, zIndex: 10 },
   regionPanel: { borderRadius: 16, borderWidth: 1, padding: 9, marginBottom: 8, flexDirection: "row", alignItems: "center" },
   regionCopy: { flex: 1, marginRight: 8 },
   regionTitle: { fontSize: 11, fontWeight: "800", textAlign: "right" },

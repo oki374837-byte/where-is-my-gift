@@ -44,7 +44,7 @@ const env = {
 const config: ExpoConfig = {
   name: env.appName,
   slug: env.appSlug,
-  version: "1.3.1",
+  version: "1.4.0",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: env.scheme,
@@ -68,7 +68,7 @@ const config: ExpoConfig = {
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
     package: env.androidPackage,
-    versionCode: 9,
+    versionCode: 10,
     ...(googleMapsApiKey
       ? { config: { googleMaps: { apiKey: googleMapsApiKey } } }
       : {}),
@@ -94,6 +94,9 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-router",
+    ...(googleMapsApiKey
+      ? [["react-native-maps", { androidGoogleMapsApiKey: googleMapsApiKey }] as [string, { androidGoogleMapsApiKey: string }]]
+      : []),
     "expo-asset",
     [
       "expo-location",
